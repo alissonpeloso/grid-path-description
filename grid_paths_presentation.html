@@ -1,0 +1,1377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSES Grid Paths - Backtracking Optimizations</title>
+    
+    <!-- Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- PrismJS Syntax Highlighting -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+    
+    <style>
+        :root {
+            --bg-primary: #0b0f19;
+            --bg-secondary: #131a2e;
+            --bg-tertiary: #1a233d;
+            --text-primary: #f3f4f6;
+            --text-secondary: #9ca3af;
+            --accent-cyan: #00f2fe;
+            --accent-purple: #9d4edd;
+            --accent-green: #10b981;
+            --accent-red: #ef4444;
+            --accent-orange: #f59e0b;
+            --border-color: rgba(255, 255, 255, 0.08);
+            --glass-bg: rgba(19, 26, 46, 0.8);
+            --glass-border: rgba(255, 255, 255, 0.05);
+            --glow-cyan: 0 0 20px rgba(0, 242, 254, 0.25);
+            --glow-red: 0 0 25px rgba(239, 68, 68, 0.4);
+            --glow-green: 0 0 20px rgba(16, 185, 129, 0.25);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--bg-primary);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--bg-tertiary);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #253356;
+        }
+
+        header {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--glass-border);
+            padding: 1.25rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-title-container {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .header-title-container i {
+            font-size: 1.8rem;
+            color: var(--accent-cyan);
+            text-shadow: var(--glow-cyan);
+        }
+
+        .header-title {
+            font-size: 1.4rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .badge-container {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .badge {
+            background: rgba(0, 242, 254, 0.1);
+            border: 1px solid rgba(0, 242, 254, 0.2);
+            color: var(--accent-cyan);
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+
+        .badge.target {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            color: var(--accent-green);
+        }
+
+        .badge-link {
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .badge-link:hover {
+            transform: scale(1.05);
+        }
+
+        main {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            padding: 2rem;
+            gap: 2rem;
+            max-width: 1600px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        @media (max-width: 1100px) {
+            main {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Sidebar / Explanations Left Column */
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        /* Navigation Tabs */
+        .tabs-nav {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            background: var(--bg-secondary);
+            padding: 0.4rem;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            padding: 0.6rem 1.2rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.85rem;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .tab-btn:hover {
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .tab-btn.active {
+            color: var(--bg-primary);
+            background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%);
+            box-shadow: var(--glow-cyan);
+            transform: translateY(-1px);
+        }
+
+        /* Glass Cards */
+        .glass-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            border-radius: 16px;
+            border: 1px solid var(--glass-border);
+            padding: 1.5rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .glass-card-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.75rem;
+        }
+
+        .glass-card-title i {
+            color: var(--accent-cyan);
+        }
+
+        /* Metrics Grid */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .metric-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-color);
+            padding: 1rem;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .metric-val {
+            font-size: 1.25rem;
+            font-weight: 800;
+            color: var(--text-primary);
+            margin-bottom: 0.25rem;
+            font-family: 'Fira Code', monospace;
+        }
+
+        .metric-val.green {
+            color: var(--accent-green);
+        }
+        .metric-val.red {
+            color: var(--accent-red);
+        }
+
+        .metric-lbl {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .explanation-text {
+            font-size: 0.95rem;
+            line-height: 1.6;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+        }
+
+        .explanation-text strong {
+            color: var(--text-primary);
+        }
+
+        .proof-box {
+            background: rgba(0, 242, 254, 0.03);
+            border-left: 4px solid var(--accent-cyan);
+            padding: 1rem;
+            border-radius: 0 12px 12px 0;
+            margin-bottom: 1.5rem;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .proof-box-title {
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 0.4rem;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        /* Code Viewer */
+        .code-container {
+            position: relative;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+            max-height: 380px;
+            overflow-y: auto;
+        }
+
+        .code-header {
+            background: #111625;
+            padding: 0.6rem 1rem;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            font-family: 'Fira Code', monospace;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .code-header .lang {
+            color: var(--accent-cyan);
+            font-weight: 600;
+        }
+
+        .code-container pre {
+            margin: 0 !important;
+            border-radius: 0 !important;
+            background: #0e1220 !important;
+            font-size: 0.85rem !important;
+            padding: 1rem !important;
+        }
+
+        /* Right Column - Simulator & Visualizer */
+        .visualizer-column {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            align-items: center;
+        }
+
+        .simulator-card {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* Grid CSS */
+        .grid-wrapper {
+            position: relative;
+            width: 100%;
+            max-width: 480px;
+            aspect-ratio: 1;
+            margin: 1rem 0;
+            background: #0d1222;
+            border-radius: 16px;
+            padding: 12px;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05);
+            flex-shrink: 0;
+        }
+
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            grid-template-rows: repeat(7, 1fr);
+            gap: 6px;
+            width: 100%;
+            height: 100%;
+        }
+
+        .grid-cell {
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.03);
+            aspect-ratio: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            font-weight: 700;
+            font-size: 0.8rem;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            user-select: none;
+            color: rgba(255,255,255,0.25);
+        }
+
+        /* Cell States */
+        .grid-cell.start-cell {
+            background: rgba(16, 185, 129, 0.15);
+            border-color: var(--accent-green);
+            color: var(--accent-green);
+            box-shadow: inset var(--glow-green);
+        }
+
+        .grid-cell.end-cell {
+            background: rgba(245, 158, 11, 0.15);
+            border-color: var(--accent-orange);
+            color: var(--accent-orange);
+        }
+
+        .grid-cell.visited {
+            background: rgba(127, 0, 255, 0.08);
+            border-color: rgba(127, 0, 255, 0.2);
+            color: rgba(255, 255, 255, 0.05);
+        }
+
+        .grid-cell.current-head {
+            background: #fff;
+            border-color: var(--accent-cyan);
+            color: var(--bg-primary);
+            box-shadow: var(--glow-cyan);
+            transform: scale(1.05);
+            z-index: 10;
+        }
+
+        .grid-cell.current-head::after {
+            content: '';
+            position: absolute;
+            width: 200%;
+            height: 200%;
+            border-radius: 50%;
+            border: 2px solid var(--accent-cyan);
+            animation: pulse 1.8s infinite;
+            pointer-events: none;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.5); opacity: 1; }
+            100% { transform: scale(1.2); opacity: 0; }
+        }
+
+        .grid-cell.pruned-cell {
+            background: rgba(239, 68, 68, 0.2);
+            border-color: var(--accent-red);
+            color: var(--accent-red);
+            box-shadow: var(--glow-red);
+            transform: scale(1.05);
+            animation: shake 0.4s ease;
+            z-index: 10;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-4px); }
+            75% { transform: translateX(4px); }
+        }
+
+        /* Interactive Overlays */
+        .grid-cell.region-a {
+            background: rgba(0, 242, 254, 0.18);
+            border-color: var(--accent-cyan);
+            color: var(--accent-cyan);
+        }
+
+        .grid-cell.region-b {
+            background: rgba(245, 158, 11, 0.18);
+            border-color: var(--accent-orange);
+            color: var(--accent-orange);
+        }
+
+        .grid-cell.diagonal-block {
+            background: rgba(239, 68, 68, 0.12);
+            border: 2px dashed var(--accent-red);
+            color: var(--accent-red);
+        }
+
+        .grid-cell.corner-indicator {
+            background: rgba(157, 78, 221, 0.18);
+            border: 2px dashed var(--accent-purple);
+            color: var(--accent-purple);
+            animation: flashBorder 1.5s infinite;
+        }
+
+        @keyframes flashBorder {
+            0%, 100% { border-color: rgba(157, 78, 221, 0.3); }
+            50% { border-color: var(--accent-purple); }
+        }
+
+        /* SVG Overlay for drawing path */
+        .grid-svg-overlay {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            width: calc(100% - 24px);
+            height: calc(100% - 24px);
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        /* Simulation Playback controls */
+        .controls-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            background: rgba(255,255,255,0.02);
+            border: 1px solid var(--border-color);
+            padding: 0.75rem 1.25rem;
+            border-radius: 12px;
+            margin-top: 1rem;
+            gap: 1rem;
+        }
+
+        .playback-buttons {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-ctrl {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            width: 38px;
+            height: 38px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+        }
+
+        .btn-ctrl:hover {
+            background: #253356;
+            color: var(--accent-cyan);
+            border-color: rgba(0, 242, 254, 0.2);
+        }
+
+        .btn-ctrl:active {
+            transform: scale(0.95);
+        }
+
+        .speed-control {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .speed-control input[type="range"] {
+            -webkit-appearance: none;
+            width: 100px;
+            height: 4px;
+            background: var(--bg-tertiary);
+            border-radius: 2px;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .speed-control input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--accent-cyan);
+            box-shadow: var(--glow-cyan);
+            transition: transform 0.1s ease;
+        }
+
+        .speed-control input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        .step-label {
+            font-family: 'Fira Code', monospace;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--accent-cyan);
+        }
+
+        /* Status Ticker */
+        .status-ticker {
+            width: 100%;
+            background: rgba(239, 68, 68, 0.05);
+            border: 1px solid rgba(239, 68, 68, 0.1);
+            color: var(--accent-red);
+            padding: 1rem;
+            border-radius: 12px;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            line-height: 1.4;
+            transition: all 0.3s ease;
+        }
+
+        .status-ticker.success {
+            background: rgba(16, 185, 129, 0.05);
+            border-color: rgba(16, 185, 129, 0.1);
+            color: var(--accent-green);
+        }
+
+        .status-ticker.info {
+            background: rgba(0, 242, 254, 0.03);
+            border-color: rgba(0, 242, 254, 0.08);
+            color: var(--accent-cyan);
+        }
+
+        .status-ticker i {
+            margin-top: 2px;
+            font-size: 1.1rem;
+        }
+
+        /* Legend Panel */
+        .legend-card {
+            width: 100%;
+        }
+
+        .legend-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.75rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+        }
+
+        /* Optimization Progression Chart Card */
+        .progression-card {
+            grid-column: 1 / -1;
+            margin-top: 1rem;
+        }
+
+        .chart-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+        }
+
+        .chart-table th, .chart-table td {
+            padding: 0.75rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .chart-table th {
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .chart-bar-container {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            width: 100%;
+        }
+
+        .chart-bar-outer {
+            flex: 1;
+            height: 8px;
+            background: var(--bg-tertiary);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .chart-bar-inner {
+            height: 100%;
+            background: linear-gradient(90deg, #00f2fe, #9d4edd);
+            border-radius: 4px;
+            transition: width 1s ease-in-out;
+        }
+
+        .call-count-label {
+            width: 100px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.85rem;
+            text-align: right;
+        }
+
+        /* Explanatory Banner for Video Recording */
+        .video-tip {
+            grid-column: 1 / -1;
+            background: linear-gradient(135deg, rgba(127, 0, 255, 0.1), rgba(225, 0, 255, 0.1));
+            border: 1px solid rgba(225, 0, 255, 0.2);
+            padding: 1.25rem;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .video-tip i {
+            font-size: 1.75rem;
+            color: var(--accent-purple);
+        }
+
+        .video-tip-content h4 {
+            font-weight: 700;
+            font-size: 1rem;
+            margin-bottom: 0.2rem;
+            color: var(--text-primary);
+        }
+
+        .video-tip-content p {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="header-title-container">
+            <i class="fa-solid fa-network-wired"></i>
+            <div>
+                <h1 class="header-title">Grid Paths Optimizer</h1>
+                <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 2px;">Visualizing backtracking prunings on a 7x7 grid</div>
+            </div>
+        </div>
+        <div class="badge-container">
+            <a href="https://cses.fi/problemset/result/17375833/" target="_blank" class="badge-link" title="View CSES submission">
+                <div class="badge"><i class="fa-solid fa-code"></i> CSES 1625</div>
+            </a>
+        </div>
+    </header>
+
+    <main>
+        <!-- Left Side: Controls, Explanations, Code -->
+        <div class="sidebar">
+            <!-- Navigation Tabs -->
+            <div class="tabs-nav">
+                <button class="tab-btn active" onclick="switchTab('overview')">
+                    <i class="fa-solid fa-globe"></i> Overview
+                </button>
+                <button class="tab-btn" onclick="switchTab('early')">
+                    <i class="fa-solid fa-circle-stop"></i> 1. Early End
+                </button>
+                <button class="tab-btn" onclick="switchTab('splitting')">
+                    <i class="fa-solid fa-arrows-split-up-and-left"></i> 2. Grid Split
+                </button>
+                <button class="tab-btn" onclick="switchTab('corner')">
+                    <i class="fa-solid fa-turn-down"></i> 3. Corner Dead-End
+                </button>
+                <button class="tab-btn" onclick="switchTab('diagonal')">
+                    <i class="fa-solid fa-border-none"></i> 4. Diagonal Pivot
+                </button>
+            </div>
+
+            <!-- Content Card -->
+            <div class="glass-card">
+                <h2 class="glass-card-title" id="opt-title">
+                    <i class="fa-solid fa-circle-info"></i> Title Loading...
+                </h2>
+                
+                <!-- Metrics -->
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-val" id="metric-calls">N/A</div>
+                        <div class="metric-lbl">DFS Call Count</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-val" id="metric-time">N/A</div>
+                        <div class="metric-lbl">Execution Time</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-val green" id="metric-speedup">N/A</div>
+                        <div class="metric-lbl">Speedup Factor</div>
+                    </div>
+                </div>
+
+                <!-- Explanation Text -->
+                <p class="explanation-text" id="opt-description">Description loading...</p>
+
+                <!-- Mathematical / Logical Explanation -->
+                <div class="proof-box">
+                    <div class="proof-box-title">
+                        <i class="fa-solid fa-brain"></i> Mathematical Insight
+                    </div>
+                    <div id="opt-proof">Proof details loading...</div>
+                </div>
+            </div>
+
+            <!-- Code Viewer -->
+            <div class="glass-card" style="padding: 1rem;">
+                <h3 class="glass-card-title" style="font-size: 0.95rem; margin-bottom: 0.75rem; border: none; padding-bottom: 0;">
+                    <i class="fa-solid fa-code-branch"></i> C++ Implementation Snippet
+                </h3>
+                <div class="code-container">
+                    <div class="code-header">
+                        <span class="file">paths_in_a_grid.cpp</span>
+                        <span class="lang">C++</span>
+                    </div>
+                    <pre><code class="language-cpp" id="cpp-code">Loading code...</code></pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Side: Grid & Legends -->
+        <div class="visualizer-column">
+            <!-- Grid Card -->
+            <div class="glass-card simulator-card">
+                <h2 class="glass-card-title" style="width: 100%; justify-content: space-between;">
+                    <span><i class="fa-solid fa-play"></i> Interactive Simulator</span>
+                    <span class="step-label" id="step-label">Step: 0 / 48</span>
+                </h2>
+
+                <!-- Grid Visualizer -->
+                <div class="grid-wrapper">
+                    <div class="grid-container" id="grid-container">
+                        <!-- Filled by JS -->
+                    </div>
+                    <!-- Path Connector SVG -->
+                    <svg class="grid-svg-overlay" viewBox="0 0 700 700">
+                        <defs>
+                            <linearGradient id="pathGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#00f2fe" />
+                                <stop offset="100%" stop-color="#9d4edd" />
+                            </linearGradient>
+                            <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                                <feGaussianBlur stdDeviation="8" result="blur" />
+                                <feMerge>
+                                    <feMergeNode in="blur" />
+                                    <feMergeNode in="SourceGraphic" />
+                                </feMerge>
+                            </filter>
+                        </defs>
+                        <path id="svg-path" d="" fill="none" stroke="url(#pathGradient)" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow)"/>
+                    </svg>
+                </div>
+
+                <!-- Action Bar -->
+                <div class="controls-bar">
+                    <div class="playback-buttons">
+                        <button class="btn-ctrl" id="btn-restart" onclick="restartAnimation()" title="Restart"><i class="fa-solid fa-rotate-left"></i></button>
+                        <button class="btn-ctrl" id="btn-prev" onclick="prevStep()" title="Step Back"><i class="fa-solid fa-chevron-left"></i></button>
+                        <button class="btn-ctrl" id="btn-play" onclick="togglePlay()" title="Play/Pause"><i class="fa-solid fa-play"></i></button>
+                        <button class="btn-ctrl" id="btn-next" onclick="nextStep()" title="Step Forward"><i class="fa-solid fa-chevron-right"></i></button>
+                    </div>
+
+                    <div class="speed-control">
+                        <span>Speed:</span>
+                        <input type="range" id="speed-slider" min="100" max="1500" step="100" value="500" onchange="updateSpeed()">
+                        <span id="speed-val">500ms</span>
+                    </div>
+                </div>
+
+                <!-- Dynamic Status Ticker -->
+                <div class="status-ticker info" id="status-ticker">
+                    <i class="fa-solid fa-info-circle"></i>
+                    <span id="ticker-msg">Click play or step through to start visualizing the search space.</span>
+                </div>
+            </div>
+
+            <!-- Legend Card -->
+            <div class="glass-card legend-card">
+                <h3 class="glass-card-title" style="font-size: 0.95rem; margin-bottom: 0.75rem; border: none; padding-bottom: 0;">
+                    <i class="fa-solid fa-map"></i> Grid Symbols & Legend
+                </h3>
+                <div class="legend-grid">
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: rgba(16, 185, 129, 0.15); border-color: var(--accent-green);"></div>
+                        <span>Start Cell (0,0)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: rgba(245, 158, 11, 0.15); border-color: var(--accent-orange);"></div>
+                        <span>Destination (0,6)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));"></div>
+                        <span>Current Search Path</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: rgba(239, 68, 68, 0.25); border-color: var(--accent-red);"></div>
+                        <span>Pruning/Dead-end Triggered</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: rgba(0, 242, 254, 0.18); border-color: var(--accent-cyan);"></div>
+                        <span>Grid Split: Left Region</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: rgba(245, 158, 11, 0.18); border-color: var(--accent-orange);"></div>
+                        <span>Grid Split: Right Region</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Call Count Progression Table -->
+        <div class="glass-card progression-card">
+            <h2 class="glass-card-title"><i class="fa-solid fa-chart-line"></i> Optimization Level & Search Space Call Count Reduction</h2>
+            <div style="overflow-x: auto;">
+                <table class="chart-table">
+                    <thead>
+                        <tr>
+                            <th>Optimization Level</th>
+                            <th>Description</th>
+                            <th>Call Count</th>
+                            <th>Call reduction</th>
+                            <th>Avg. Runtime</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Level 0: Base DFS</strong></td>
+                            <td>DFS with simple visited check (no target bounds pruning)</td>
+                            <td>
+                                <div class="chart-bar-container">
+                                    <div class="chart-bar-outer"><div class="chart-bar-inner" style="width: 100%; background: #ef4444;"></div></div>
+                                    <span class="call-count-label">~1.2 x 10¹⁵</span>
+                                </div>
+                            </td>
+                            <td>Baseline</td>
+                            <td>Much time</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Level 1: Early End</strong></td>
+                            <td>Backtrack immediately if destination (0,6) is reached before step 48</td>
+                            <td>
+                                <div class="chart-bar-container">
+                                    <div class="chart-bar-outer"><div class="chart-bar-inner" style="width: 85%; background: #ef4444;"></div></div>
+                                    <span class="call-count-label">&gt; 3 Billion</span>
+                                </div>
+                            </td>
+                            <td>Timeout</td>
+                            <td>Timeout (&gt; 3m)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Level 2: Grid Split</strong></td>
+                            <td>Prune if path hits wall/visited cell and splits grid into two unvisited regions</td>
+                            <td>
+                                <div class="chart-bar-container">
+                                    <div class="chart-bar-outer"><div class="chart-bar-inner" style="width: 50%; background: #f59e0b;"></div></div>
+                                    <span class="call-count-label">46,816,433</span>
+                                </div>
+                            </td>
+                            <td>98.4% (from L1)</td>
+                            <td>4.97 Seconds</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Level 3: Corner Check</strong></td>
+                            <td>Prune if target neighbor cells are blocked and cannot both be visited</td>
+                            <td>
+                                <div class="chart-bar-container">
+                                    <div class="chart-bar-outer"><div class="chart-bar-inner" style="width: 30%; background: #3b82f6;"></div></div>
+                                    <span class="call-count-label">27,337,413</span>
+                                </div>
+                            </td>
+                            <td>41.6% (from L2)</td>
+                            <td>3.11 Seconds</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Level 4: Diagonal Pivot</strong></td>
+                            <td>Prune if a diagonal cell is blocked but both adjacent orthogonal cells are free</td>
+                            <td>
+                                <div class="chart-bar-container">
+                                    <div class="chart-bar-outer"><div class="chart-bar-inner" style="width: 10%; background: #10b981;"></div></div>
+                                    <span class="call-count-label">8,025,304</span>
+                                </div>
+                            </td>
+                            <td>70.6% (from L3)</td>
+                            <td><strong>1.22 Seconds</strong></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+
+    </main>
+
+    <!-- PrismJS Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-c.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-cpp.min.js"></script>
+
+    <!-- Presentation Javascript -->
+    <script>
+        // State variables
+        let currentTab = 'overview';
+        let currentStepIndex = 0;
+        let isPlaying = false;
+        let playInterval = null;
+        let animationSpeed = 500; // ms per step
+
+        // Tab configurations
+        const tabConfigs = {
+            overview: {
+                title: "Grid Paths Problem & DFS Backtracking",
+                calls: "1.2 x 10¹⁵",
+                time: "Much time",
+                speedup: "1x (Base)",
+                description: "The objective is to find the number of paths in a <strong>7x7 grid</strong> from <strong>(0,0)</strong> (top-left) to <strong>(0,6)</strong> (bottom-left) that visit every single cell exactly once in exactly 48 steps.<br><br>A naive backtracking DFS search space is extremely massive (approx. 4⁴⁸ states) and will take decades to complete. We must use pruning heuristics to solve this in under 1 second.",
+                proof: "A Hamiltonian path must visit all 49 cells. A standard backtracking search tries 4 options (Up, Down, Left, Right) at each cell. We can prune paths immediately when we prove they can never reach the destination or will leave some cells unvisited.",
+                code: `// Base Backtracking DFS Skeleton
+int countPaths(int x, int y, int count, string pathDescription) {
+    callCount++;
+
+    // Base Case: If count = 49 (n*n) and we reached the target
+    if (count == n * n && x == 0 && y == n - 1) {
+        return 1;
+    }
+
+    grid[y][x] = 1; // Mark cell as visited
+
+    // Recursively try to go Down, Up, Left, Right
+    if (canGoDown)  down  = countPaths(x, y + 1, count + 1, ...);
+    if (canGoUp)    up    = countPaths(x, y - 1, count + 1, ...);
+    if (canGoLeft)  left  = countPaths(x - 1, y, count + 1, ...);
+    if (canGoRight) right = countPaths(x + 1, y, count + 1, ...);
+
+    grid[y][x] = 0; // Backtracking (Unmark cell)
+    return down + up + left + right;
+}`,
+                path: [
+                    [0,0], [1,0], [2,0], [3,0], [4,0], [5,0], [6,0],
+                    [6,1], [6,2], [6,3], [6,4], [6,5], [6,6],
+                    [5,6], [5,5], [5,4], [5,3], [5,2], [5,1],
+                    [4,1], [4,2], [4,3], [4,4], [4,5], [4,6],
+                    [3,6], [3,5], [3,4], [3,3], [3,2], [3,1],
+                    [2,1], [2,2], [2,3], [2,4], [2,5], [2,6],
+                    [1,6], [1,5], [1,4], [1,3], [1,2], [1,1],
+                    [0,1], [0,2], [0,3], [0,4], [0,5], [0,6]
+                ],
+                pruneStep: -1,
+                pruneType: null
+            },
+            early: {
+                title: "Optimization 1: Early Destination Check",
+                calls: "> 3 Billion",
+                time: "Timeout",
+                speedup: "Timeout",
+                description: "If the path reaches the destination cell <strong>(0,6)</strong> (bottom-left) before visiting all 49 cells, we can immediately stop and return 0.<br><br>Since the path is not allowed to revisit any cell, once we arrive at the destination, the path must terminate. Arriving early means some cells will remain unvisited forever.",
+                proof: "Let S be the current step count. If coordinate (x, y) = (0, 6) and S < 49, it is impossible to visit any remaining unvisited cells and still end at the target. Thus, this search branch is invalid.",
+                code: `// Optimization 1: Destination reached too early
+if (x == 0 && y == n - 1) {
+    return 0;
+}`,
+                path: [
+                    [0,0], [0,1], [0,2], [0,3], [0,4], [0,5], [0,6]
+                ],
+                pruneStep: 6,
+                pruneType: "early"
+            },
+            splitting: {
+                title: "Optimization 2: Grid Splitting Pruning",
+                calls: "46,816,433",
+                time: "4.97s",
+                speedup: "62x",
+                description: "If the path touches a wall or a visited cell, and cannot continue straight, but could turn in both perpendicular directions (e.g. Left/Right when going vertical, or Up/Down when going horizontal), the grid is split into <strong>two isolated regions</strong> containing unvisited cells.<br><br>Since we cannot jump, we can only visit one region, leaving the other region unvisited.",
+                proof: "Splitting the remaining grid into two disconnected components containing unvisited cells makes it topologically impossible to cover both components with a single continuous simple path. Checking this wall boundary condition allows early backtracking.",
+                code: `// Optimization 2: Grid split detected
+// Case A: Path touches a vertical wall and can only turn Left or Right
+if (!canGoDown && !canGoUp && canGoLeft && canGoRight) {
+    grid[y][x] = 0; // backtrack
+    return 0;
+}
+// Case B: Path touches a horizontal wall and can only turn Up or Down
+if (canGoDown && canGoUp && !canGoLeft && !canGoRight) {
+    grid[y][x] = 0; // backtrack
+    return 0;
+}`,
+                path: [
+                    [0,0], [1,0], [2,0], [3,0], [3,1], [3,2], [3,3], [3,4], [3,5], [3,6]
+                ],
+                pruneStep: 9,
+                pruneType: "split"
+            },
+            corner: {
+                title: "Optimization 3: Target Corner Neighbor Checks",
+                calls: "27,337,413",
+                time: "3.11s",
+                speedup: "97x",
+                description: "When the path reaches the diagonal neighbor of the destination, specifically <strong>(1,5)</strong>, and both adjacent entrances to the destination <strong>(0,5)</strong> and <strong>(1,6)</strong> are unvisited, we must prune.<br><br>Entering the destination cell (0,6) from one neighbor blocks our ability to visit the other neighbor, since the search ends at (0,6).",
+                proof: "The target cell (0,6) can only be entered from (0,5) or (1,6). If both are unvisited and we are at (1,5), any choice we make blocks the other. If we go to (0,5), we must eventually enter (0,6) and stop, leaving (1,6) unvisited.",
+                code: `// Optimization 3: Corner pruning near destination
+if (x == 1 && y == n - 2 && canGoLeft && canGoDown) {
+    grid[y][x] = 0; // backtrack
+    return 0;
+}`,
+                path: [
+                    [0,0], [1,0], [2,0], [3,0], [4,0], [5,0], [6,0],
+                    [6,1], [5,1], [4,1], [3,1], [2,1], [1,1],
+                    [1,2], [2,2], [3,2], [4,2], [5,2],
+                    [5,3], [4,3], [3,3], [2,3], [1,3],
+                    [1,4], [2,4], [3,4], [4,4], [5,4],
+                    [5,5], [4,5], [3,5], [2,5], [1,5]
+                ],
+                pruneStep: 32,
+                pruneType: "corner"
+            },
+            diagonal: {
+                title: "Optimization 4: Diagonal Block Pruning",
+                calls: "8,025,304",
+                time: "1.22s",
+                speedup: "305x",
+                description: "If a diagonal neighbor cell (e.g. <strong>(x+1, y+1)</strong>) is blocked (visited or wall), and we can go both Down and Right, we must prune.<br><br>Because the diagonal cell is blocked, it acts as a pivot, splitting the search space. Going one direction traps the other orthogonal cell as a dead-end.",
+                proof: "Let (x, y) be current cell. If (x+1, y+1) is blocked, (x+1, y) and (x, y+1) can no longer share a common free diagonal connection. Choosing to go Down to (x, y+1) prevents us from later visiting (x+1, y) and successfully continuing, creating an isolated region.",
+                code: `// Optimization 4: Diagonal block check (4 directions)
+if (isBlocked(x+1, y+1) && canGoDown && canGoRight) {
+    grid[y][x] = 0; return 0;
+}
+if (isBlocked(x-1, y+1) && canGoDown && canGoLeft) {
+    grid[y][x] = 0; return 0;
+}
+if (isBlocked(x+1, y-1) && canGoUp && canGoRight) {
+    grid[y][x] = 0; return 0;
+}
+if (isBlocked(x-1, y-1) && canGoUp && canGoLeft) {
+    grid[y][x] = 0; return 0;
+}`,
+                path: [
+                    [0,0], [1,0], [2,0], [3,0], [4,0], [5,0],
+                    [5,1], [5,2], [5,3],
+                    [4,3], [3,3], [3,4], [3,5],
+                    [2,5], [2,4],
+                    [1,4], [1,3], [1,2], [1,1],
+                    [2,1], [2,2]
+                ],
+                pruneStep: 20,
+                pruneType: "diagonal"
+            }
+        };
+
+        // Initialize grid HTML structure
+        function createGrid() {
+            const container = document.getElementById('grid-container');
+            container.innerHTML = '';
+            for (let r = 0; r < 7; r++) {
+                for (let c = 0; c < 7; c++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'grid-cell';
+                    cell.id = `cell-${c}-${r}`;
+                    
+                    // Show start and end labels
+                    if (c === 0 && r === 0) {
+                        cell.classList.add('start-cell');
+                        cell.innerHTML = 'S';
+                    } else if (c === 0 && r === 6) {
+                        cell.classList.add('end-cell');
+                        cell.innerHTML = 'E';
+                    } else {
+                        cell.innerHTML = `${c},${r}`;
+                    }
+                    container.appendChild(cell);
+                }
+            }
+        }
+
+        // Render current state of animation on the grid
+        function renderStep() {
+            const config = tabConfigs[currentTab];
+            const steps = config.path;
+            const limit = currentStepIndex;
+
+            // Clear all special states from grid
+            for (let r = 0; r < 7; r++) {
+                for (let c = 0; c < 7; c++) {
+                    const cell = document.getElementById(`cell-${c}-${r}`);
+                    cell.classList.remove('visited', 'current-head', 'pruned-cell', 'region-a', 'region-b', 'diagonal-block', 'corner-indicator');
+                }
+            }
+
+            // Draw Visited Path Cells
+            for (let i = 0; i <= limit; i++) {
+                const [x, y] = steps[i];
+                const cell = document.getElementById(`cell-${x}-${y}`);
+                if (cell) {
+                    if (i === limit) {
+                        cell.classList.add('current-head');
+                    } else {
+                        cell.classList.add('visited');
+                    }
+                }
+            }
+
+            // Draw SVG Path Overlay
+            const svgPath = document.getElementById('svg-path');
+            if (limit >= 0) {
+                let d = '';
+                for (let i = 0; i <= limit; i++) {
+                    const [x, y] = steps[i];
+                    // Map grid coordinate to 700x700 viewBox coordinates
+                    const px = (x + 0.5) * 100;
+                    const py = (y + 0.5) * 100;
+                    if (i === 0) {
+                        d += `M ${px} ${py}`;
+                    } else {
+                        d += ` L ${px} ${py}`;
+                    }
+                }
+                svgPath.setAttribute('d', d);
+            } else {
+                svgPath.setAttribute('d', '');
+            }
+
+            // Update step label
+            document.getElementById('step-label').textContent = `Step: ${limit} / ${steps.length - 1}`;
+
+            // Check if pruning is triggered at the current step
+            const ticker = document.getElementById('status-ticker');
+            const tickerMsg = document.getElementById('ticker-msg');
+            
+            if (limit === config.pruneStep && config.pruneStep !== -1) {
+                const [px, py] = steps[limit];
+                const cell = document.getElementById(`cell-${px}-${py}`);
+                cell.classList.add('pruned-cell');
+                ticker.className = 'status-ticker';
+                
+                // Show visual explanations specific to each pruning
+                if (config.pruneType === 'early') {
+                    tickerMsg.textContent = `PRUNED! Destination cell (0,6) reached at Step 7, but only 7 / 49 cells visited. Recursion halted.`;
+                } 
+                else if (config.pruneType === 'split') {
+                    tickerMsg.textContent = `PRUNED! Wall hit at (3,6). Path cannot go vertical, but both Left and Right are free. Remaining cells split into two isolated regions.`;
+                    // Highlight regions
+                    const visitedGrid = Array(7).fill(0).map(() => Array(7).fill(false));
+                    for (let i = 0; i <= limit; i++) {
+                        const [tx, ty] = steps[i];
+                        visitedGrid[ty][tx] = true;
+                    }
+                    const regionA = getRegions(visitedGrid, 2, 6);
+                    const regionB = getRegions(visitedGrid, 4, 6);
+                    
+                    regionA.forEach(([rx, ry]) => {
+                        document.getElementById(`cell-${rx}-${ry}`).classList.add('region-a');
+                    });
+                    regionB.forEach(([rx, ry]) => {
+                        document.getElementById(`cell-${rx}-${ry}`).classList.add('region-b');
+                    });
+                } 
+                else if (config.pruneType === 'corner') {
+                    tickerMsg.textContent = `PRUNED! At (1,5), both entrances to destination - (0,5) and (1,6) - are unvisited. We cannot visit both.`;
+                    document.getElementById(`cell-0-5`).classList.add('corner-indicator');
+                    document.getElementById(`cell-1-6`).classList.add('corner-indicator');
+                } 
+                else if (config.pruneType === 'diagonal') {
+                    tickerMsg.textContent = `PRUNED! Diagonal cell (3,3) is blocked (visited), but both Down (2,3) and Right (3,2) are free. Choosing one isolates the other.`;
+                    document.getElementById(`cell-3-3`).classList.add('diagonal-block');
+                }
+            } else {
+                ticker.className = 'status-ticker info';
+                if (limit === steps.length - 1 && config.pruneStep === -1) {
+                    ticker.className = 'status-ticker success';
+                    tickerMsg.textContent = `SUCCESS! Path successfully visited all 49 cells and reached the destination.`;
+                } else {
+                    const [cx, cy] = steps[limit];
+                    tickerMsg.textContent = `DFS searching: Path at (${cx}, ${cy}). Recursion depth: ${limit + 1}.`;
+                }
+            }
+        }
+
+        // Flood fill helper to identify isolated regions
+        function getRegions(visitedGrid, startX, startY) {
+            const visited = Array(7).fill(0).map(() => Array(7).fill(false));
+            const cells = [];
+            const queue = [[startX, startY]];
+            visited[startY][startX] = true;
+            
+            while(queue.length > 0) {
+                const [cx, cy] = queue.shift();
+                cells.push([cx, cy]);
+                const dirs = [[0,1],[0,-1],[1,0],[-1,0]];
+                for(const [dx, dy] of dirs) {
+                    const nx = cx + dx;
+                    const ny = cy + dy;
+                    if(nx >= 0 && nx < 7 && ny >= 0 && ny < 7) {
+                        if(!visitedGrid[ny][nx] && !visited[ny][nx]) {
+                            visited[ny][nx] = true;
+                            queue.push([nx, ny]);
+                        }
+                    }
+                }
+            }
+            return cells;
+        }
+
+        // Switch presentation tabs
+        function switchTab(tabKey) {
+            currentTab = tabKey;
+            
+            // Highlight tab button
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            // Set active class on target button
+            const buttons = document.querySelectorAll('.tab-btn');
+            for(let btn of buttons) {
+                if(btn.getAttribute('onclick').includes(tabKey)) {
+                    btn.classList.add('active');
+                    break;
+                }
+            }
+
+            // Load text & metrics
+            const config = tabConfigs[tabKey];
+            document.getElementById('opt-title').innerHTML = `<i class="fa-solid fa-circle-info"></i> ${config.title}`;
+            document.getElementById('metric-calls').textContent = config.calls;
+            document.getElementById('metric-time').textContent = config.time;
+            document.getElementById('metric-speedup').textContent = config.speedup;
+            document.getElementById('opt-description').innerHTML = config.description;
+            document.getElementById('opt-proof').innerHTML = config.proof;
+
+            // Load Code Snippet with Prism Highlight
+            const codeEl = document.getElementById('cpp-code');
+            codeEl.textContent = config.code;
+            Prism.highlightElement(codeEl);
+
+            // Reset animation
+            restartAnimation();
+        }
+
+        // Playback Control Functions
+        function togglePlay() {
+            const btn = document.getElementById('btn-play');
+            if (isPlaying) {
+                clearInterval(playInterval);
+                btn.innerHTML = '<i class="fa-solid fa-play"></i>';
+                isPlaying = false;
+            } else {
+                isPlaying = true;
+                btn.innerHTML = '<i class="fa-solid fa-pause"></i>';
+                playInterval = setInterval(() => {
+                    if (currentStepIndex < tabConfigs[currentTab].path.length - 1) {
+                        currentStepIndex++;
+                        renderStep();
+                    } else {
+                        togglePlay(); // Pause at end
+                    }
+                }, animationSpeed);
+            }
+        }
+
+        // Restart animation
+        function restartAnimation() {
+            if (isPlaying) togglePlay();
+            currentStepIndex = 0;
+            renderStep();
+        }
+
+        function prevStep() {
+            if (isPlaying) togglePlay();
+            if (currentStepIndex > 0) {
+                currentStepIndex--;
+                renderStep();
+            }
+        }
+
+        function nextStep() {
+            if (isPlaying) togglePlay();
+            if (currentStepIndex < tabConfigs[currentTab].path.length - 1) {
+                currentStepIndex++;
+                renderStep();
+            }
+        }
+
+        function updateSpeed() {
+            const slider = document.getElementById('speed-slider');
+            animationSpeed = parseInt(slider.value);
+            document.getElementById('speed-val').textContent = `${animationSpeed}ms`;
+            if (isPlaying) {
+                togglePlay();
+                togglePlay();
+            }
+        }
+
+        // Start page
+        createGrid();
+        // Load initial tab on DOM load
+        window.addEventListener('DOMContentLoaded', () => {
+            switchTab('overview');
+        });
+    </script>
+</body>
+</html>
