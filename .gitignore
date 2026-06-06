@@ -2,3 +2,4 @@ paths_in_a_grid
 .DS_Store
 *.o
 *.out
+.idea
